@@ -25,11 +25,7 @@ ICONPATH = '/wp-content/plugins/sil-dictionary-webonary/images/' //change if the
 foldersTree = gFld("", "")<br>
 <br>
 <?php
-$semanticDomains = $_REQUEST['semanticDomains'];
 
-//print ("Input string is: $semanticDomains <br><br>");
-
-$semanticDomainsArray = split("\n", $semanticDomains);
 
 $roots = array( 'no 0 domain',
 		' aux1 = insFld(foldersTree, gFld("1. Universe, creation", "c0001.htm"))',
@@ -45,30 +41,61 @@ $roots = array( 'no 0 domain',
 $rootDomainPrinted = array('no zero domain',
 		'no', 'no', 'no', 'no', 'no', 'no', 'no', 'no', 'no');
 
-foreach ($roots as $root){
-	print "$root <br>";
-}
-$treeLevel = 0;
-foreach ($semanticDomainsArray as $semanticDomain)
+//define a way to keep track of which semantic domain parents have been processed already.
+//eg is we have 1.3.1.1 and the odomerter says 1,3,0,0,0,0 then we need to first output 1,3,1
+$semDomainsOdometer = array (0,0,0,0,0,0);
+
+//processFromTextBox();
+
+processFromFile();
+
+//foreach ($roots as $root){
+//	print "$root <br>";
+//}
+
+//$treeLevel = 0;
+
+
+
+?>
+
+<?php 
+function processFromFile()
 {
-	//print ("$semanticDomain <br>");
-	$parsedData = split(" ", $semanticDomain);
-	$domainNumber = $parsedData[0];
+	 $file = fopen("SemDomainsSena3Copy.txt","r");
+	 while (!feof($file))
+	 {
+		 $currentSemDomain = fgets($file);
+		 //print "$currentSemDomain<br>";
+		 $parsedData = split(" ", $currentSemDomain);
+		 $domainNumber = $parsedData[0];
+		 $domainDigits = split('-', $domainNumber);
+		 
+		 printRootDomainIfNeeded($domainNumber);
+		 
+		 $domainNumberModified = preg_replace('/-/', '.', $domainNumber) . '.';
+		 $levelOfDomain = substr_count("$domainNumber","-") + 1;
+		 $newString = "$domainNumberModified" . substr($semanticDomain, strlen($domainNumber), strlen($semanticDomain));
+		 
+		 outputJava($levelOfDomain, $newString);
+	 }
+	 fclose($file); 
+}
+
+function printRootDomainIfNeeded($domainNumber)
+{
 	$rootDomain = substr($domainNumber, 0, 1);
 	//print "rootDomain:$rootDomain rootDomainPrinted:$rootDomainPrinted[$rootDomain] ";
 	if ("$rootDomainPrinted[$rootDomain]" =="no")
 	{
-		print "<br>$roots[$rootDomain] <br>";
+		print "$roots[$rootDomain] <br>";
 		$rootDomainPrinted[$rootDomain] = "yes";
+		$semDomainsOdometer[0] = $rootDomain;
 	}
-	$domainNumberModified = preg_replace('/-/', '.', $domainNumber) . '.';
-	$levelOfDomain = substr_count("$domainNumber","-") + 1;
-	//print "levelOfDomain:$levelOfDomain,     ";
-	$newString = "$domainNumberModified" . substr($semanticDomain, strlen($domainNumber), strlen($semanticDomain));
-	print "$newString <br>";
-	
-	//print ('aux' . '$levelOfDomain = insFld(aux');
-	
+}
+
+function outputJava($levelOfDomain, $newString)
+{
 	switch($levelOfDomain)
 	{
 		case 2:
@@ -86,56 +113,90 @@ foreach ($semanticDomainsArray as $semanticDomain)
 			print "$newString";
 			print '", "c1000.htm"))<br>';
 			break;
+		case 5:
+			print 'aux5 = insFld(aux4, gFld("';
+			print "$newString";
+			print '", "c1000.htm"))<br>';
+			break;
 		default:
+			print "$newString";
 			print "Something went wrong <br>";
 	}
-	
-	
-	
 }
+
+function processFromTextBox()
+{
+	$semanticDomains = $_REQUEST['semanticDomains'];
+	//print ("Input string is: $semanticDomains <br><br>");
+	$semanticDomainsArray = split("\n", $semanticDomains);
+	foreach ($semanticDomainsArray as $semanticDomain)
+	{
+		//print ("$semanticDomain <br>");
+		$parsedData = split(" ", $semanticDomain);
+		$domainNumber = $parsedData[0];
+		$rootDomain = substr($domainNumber, 0, 1);
+		//print "rootDomain:$rootDomain rootDomainPrinted:$rootDomainPrinted[$rootDomain] ";
+		if ("$rootDomainPrinted[$rootDomain]" =="no")
+		{
+			print "$roots[$rootDomain] <br>";
+			$rootDomainPrinted[$rootDomain] = "yes";
+		}
+		$domainNumberModified = preg_replace('/-/', '.', $domainNumber) . '.';
+		$levelOfDomain = substr_count("$domainNumber","-") + 1;
+		//print "levelOfDomain:$levelOfDomain,     ";
+		$newString = "$domainNumberModified" . substr($semanticDomain, strlen($domainNumber), strlen($semanticDomain));
+		//print "$newString <br>";
+	
+		//print ('aux' . '$levelOfDomain = insFld(aux');
+	
+		outputJava($levelOfDomain, $newString);
+	
+	}
+}
+
+
 ?>
 
-?
 
 <?php
-/*
- $exchangeRates = $_REQUEST['exchangeRates'];
-//print ("Input string is: $exchangeRates <br><br>");
 
-$exchangeRatesArray = split("\n", $exchangeRates);
-
-$avgToUSA = 0.0;
-$avgToCanada = 0.0;
-$numExhRates = 0;
-foreach ($exchangeRatesArray as $exchRateData)
+function processExchangeRateAverage()
 {
-	$numExhRates++;
-	//print ("$exchRateData <br>");
-	$exchRateData = preg_replace('/\t+/', ' ', $exchRateData);
-	$parsedData = split(" ", $exchRateData);
-	//foreach ($parsedData as $dataItem)
-	//{
-	//	print ("di $dataItem, ");
-	//}
-	//print "<br>";
+	$exchangeRates = $_REQUEST['exchangeRates'];
+	//print ("Input string is: $exchangeRates <br><br>");
 	
-	$exchRateToUSA = $parsedData[3];
-	$exchRateToCanada = substr($parsedData[4], 1, $parsedData[4]-2);
-	print "exchRateToUSA:$exchRateToUSA  and exchRateToCanada:$exchRateToCanada <br>";
-	$avgToUSA = $avgToUSA + (float)$exchRateToUSA;
-	$avgToCanada = $avgToCanada + (float)$exchRateToCanada;
-	//print "avgToUSA:$avgToUSA  and avgToCanada:$avgToCanada <br><br>";
+	$exchangeRatesArray = split("\n", $exchangeRates);
 	
+	$avgToUSA = 0.0;
+	$avgToCanada = 0.0;
+	$numExhRates = 0;
+	foreach ($exchangeRatesArray as $exchRateData)
+	{
+		$numExhRates++;
+		//print ("$exchRateData <br>");
+		$exchRateData = preg_replace('/\t+/', ' ', $exchRateData);
+		$parsedData = split(" ", $exchRateData);
+		//foreach ($parsedData as $dataItem)
+		//{
+		//	print ("di $dataItem, ");
+		//}
+		//print "<br>";
+	
+		$exchRateToUSA = $parsedData[3];
+		$exchRateToCanada = substr($parsedData[4], 1, $parsedData[4]-2);
+		print "exchRateToUSA:$exchRateToUSA  and exchRateToCanada:$exchRateToCanada <br>";
+		$avgToUSA = $avgToUSA + (float)$exchRateToUSA;
+		$avgToCanada = $avgToCanada + (float)$exchRateToCanada;
+		//print "avgToUSA:$avgToUSA  and avgToCanada:$avgToCanada <br><br>";
+	
+	}
+	$avgToUSAis = $avgToUSA/$numExhRates;
+	$avgToCanadais = $avgToCanada/$numExhRates;
+	
+	print ("avgToUSA is $avgToUSAis <br> avgToCanada is $avgToCanadais <br>");
 }
-$avgToUSAis = $avgToUSA/$numExhRates;
-$avgToCanadais = $avgToCanada/$numExhRates;
 
-print ("avgToUSA is $avgToUSAis <br> avgToCanada is $avgToCanadais <br>")
-*/
 ?>
-
-
-
 
 </body>
 </html>
