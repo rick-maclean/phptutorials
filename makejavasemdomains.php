@@ -69,33 +69,80 @@ function processFromFile()
 		 //print "$currentSemDomain<br>";
 		 $parsedData = split(" ", $currentSemDomain);
 		 $domainNumber = $parsedData[0];
-		 $domainDigits = split('-', $domainNumber);
+		 $levelOfDomain = substr_count("$domainNumber","-") + 1;
 		 
-		 printRootDomainIfNeeded($domainNumber);
+		 buildTreeToSupportThisItem($domainNumber, $levelOfDomain);
 		 
 		 $domainNumberModified = preg_replace('/-/', '.', $domainNumber) . '.';
-		 $levelOfDomain = substr_count("$domainNumber","-") + 1;
 		 $newString = "$domainNumberModified" . substr($semanticDomain, strlen($domainNumber), strlen($semanticDomain));
-		 
-		 outputJava($levelOfDomain, $newString);
+		 outputSemDomAsJava($levelOfDomain, $newString);
 	 }
 	 fclose($file); 
 }
 
+function buildTreeToSupportThisItem($domainNumber, $levelOfDomain)
+{
+	global $semDomainsOdometer;
+	//First insert the standard tree root element if it is needed here.
+	printRootDomainIfNeeded($domainNumber);
+	$domainDigits = split('-', $domainNumber);
+	$levelToPrint = array($semDomainsOdometer[0],0,0,0,0,0);
+	print '$semDomainsOdometer:'. $semDomainsOdometer[0] .'<br>';
+	print '$domainNumber:'. $domainNumber .'<br>'; 
+	print '   $levelOfDomain:'. $levelOfDomain .'<br>';
+	print '   $levelToPrint:';
+	foreach ($levelToPrint as $digit)
+	{
+		print $digit . '.';
+	}
+	print '<br>';
+	
+	for ($i=0; $i<$levelOfDomain-1; $i++)
+	{
+		print '    $domainDigits[i]:'. (string)$domainDigits[i] . '    $semDomainsOdometer[i]:'. (string)$semDomainsOdometer[i] . '<br>'; 
+		if ($domainDigits[i] > $semDomainsOdometer[i])
+		{
+			$levelToPrint[i] = $domainDigits[i];
+			for ($j=0; $j<i; $j++)
+			{
+				$strPrint = $levelToPrint[i] . '.';
+			}
+			outputSemDomAsJava($i, $strPrint);
+		}
+	}
+
+}
+
 function printRootDomainIfNeeded($domainNumber)
 {
+	global $semDomainsOdometer;
+	global $rootDomainPrinted;
+	global $roots;
 	$rootDomain = substr($domainNumber, 0, 1);
 	//print "rootDomain:$rootDomain rootDomainPrinted:$rootDomainPrinted[$rootDomain] ";
 	if ("$rootDomainPrinted[$rootDomain]" =="no")
 	{
 		print "$roots[$rootDomain] <br>";
 		$rootDomainPrinted[$rootDomain] = "yes";
-		$semDomainsOdometer[0] = $rootDomain;
+		
+		$semDomainsOdometer = array($rootDomain,0,0,0,0);
+		//print '   $semDomainsOdometer(all):';
+		//foreach ($semDomainsOdometer as $digit)
+		//{
+		//	print $digit . '.';
+		//}
+		//print '<br>';
 	}
 }
 
-function outputJava($levelOfDomain, $newString)
+function outputSemDomAsJava($levelOfDomain, $newString)
 {
+	$levelMinus1 = (string)$levelOfDomain-1;
+	print 'aux' . (string)$levelOfDomain . '= insFld(aux' . $levelMinus1 . ', gFld("';
+    print "$newString";
+	print '", "c1000.htm"))<br>';
+	
+	/*
 	switch($levelOfDomain)
 	{
 		case 2:
@@ -122,8 +169,17 @@ function outputJava($levelOfDomain, $newString)
 			print "$newString";
 			print "Something went wrong <br>";
 	}
+	*/
+	
 }
 
+?>
+
+
+
+
+
+<?php 
 function processFromTextBox()
 {
 	$semanticDomains = $_REQUEST['semanticDomains'];
@@ -146,20 +202,16 @@ function processFromTextBox()
 		//print "levelOfDomain:$levelOfDomain,     ";
 		$newString = "$domainNumberModified" . substr($semanticDomain, strlen($domainNumber), strlen($semanticDomain));
 		//print "$newString <br>";
-	
+
 		//print ('aux' . '$levelOfDomain = insFld(aux');
-	
+
 		outputJava($levelOfDomain, $newString);
-	
+
 	}
 }
-
-
 ?>
 
-
 <?php
-
 function processExchangeRateAverage()
 {
 	$exchangeRates = $_REQUEST['exchangeRates'];
@@ -195,7 +247,6 @@ function processExchangeRateAverage()
 	
 	print ("avgToUSA is $avgToUSAis <br> avgToCanada is $avgToCanadais <br>");
 }
-
 ?>
 
 </body>
