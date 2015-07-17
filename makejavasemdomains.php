@@ -43,7 +43,9 @@ $rootDomainPrinted = array('no zero domain',
 
 //define a way to keep track of which semantic domain parents have been processed already.
 //eg is we have 1.3.1.1 and the odomerter says 1,3,0,0,0,0 then we need to first output 1,3,1
-$semDomainsOdometer = array (0,0,0,0,0,0);
+$lastNamelessSemDom = array (0,0,0,0,0,0);
+$lastNamelessSemDomLevel = 0;
+$lastNamedSemDom = array (0,0,0,0,0,0);
 
 //processFromTextBox();
 
@@ -62,6 +64,7 @@ processFromFile();
 <?php 
 function processFromFile()
 {
+	global $lastNamedSemDom;
 	 $file = fopen("SemDomainsSena3Copy.txt","r");
 	 while (!feof($file))
 	 {
@@ -71,51 +74,82 @@ function processFromFile()
 		 $domainNumber = $parsedData[0];
 		 $levelOfDomain = substr_count("$domainNumber","-") + 1;
 		 
+		 printRootDomainIfNeeded($domainNumber);
+		 
 		 buildTreeToSupportThisItem($domainNumber, $levelOfDomain);
 		 
 		 $domainNumberModified = preg_replace('/-/', '.', $domainNumber) . '.';
-		 $newString = "$domainNumberModified" . substr($semanticDomain, strlen($domainNumber), strlen($semanticDomain));
+		 $newString = "$domainNumberModified" . substr($currentSemDomain, strlen($domainNumber), strlen($currentSemDomain));
 		 outputSemDomAsJava($levelOfDomain, $newString);
+		 $lastNamedSemDom = split('-', $domainNumber);
 	 }
 	 fclose($file); 
 }
 
 function buildTreeToSupportThisItem($domainNumber, $levelOfDomain)
 {
-	global $semDomainsOdometer;
+	global $lastNamelessSemDom;
+	global $lastNamelessSemDomLevel;
+	global $lastNamedSemDom;
+	$lastNamedSemDomLevel = count($lastNamedSemDom);
 	//First insert the standard tree root element if it is needed here.
-	printRootDomainIfNeeded($domainNumber);
+	//printRootDomainIfNeeded($domainNumber);
 	$domainDigits = split('-', $domainNumber);
-	$levelToPrint = array($semDomainsOdometer[0],0,0,0,0,0);
-	print '$semDomainsOdometer:'. $semDomainsOdometer[0] .'<br>';
-	print '$domainNumber:'. $domainNumber .'<br>'; 
-	print '   $levelOfDomain:'. $levelOfDomain .'<br>';
-	print '   $levelToPrint:';
-	foreach ($levelToPrint as $digit)
+	
+	//print 'entered buildTreeToSupportThisItem   <br>';
+	//print '$levelOfDomain='.$levelOfDomain.'   <br>';
+	//printlastNamelessSemDom ();
+	
+	//if ($levelOfDomain == $lastNamelessSemDomLevel+1)
+	//{
+	//	$lastNamelessSemDom[$lastNamelessSemDomLevel] = $domainDigits;
+	//	return;
+	//}
+	if ($levelOfDomain > $lastNamedSemDomLevel)
+	{
+		//step through the digits and see what needs to be added
+		//eg  1.1.1 to 1.1.3.1
+		//compare 1-1 1-1 1-3 we need to add 1.1.3 before 1.1.3.1
+		$strToPrint = '';
+		$matching = true;
+		for ($i=0; $i < $lastNamedSemDomLevel; $i++)
+		{
+			$strToPrint = $strToPrint . $domainDigits[$i] . '.';
+			if ($domainDigits[$i] > $lastNamedSemDom[$i])
+			{
+				print "here is a nameless one we will print: $strToPrint <br>";
+				$matching = false;
+				outputSemDomAsJava($i+1, "$strToPrint NONAME");
+			}
+		}
+	}
+	//printlastNamedSemDom ();
+	/*
+	if ($levelOfDomain > $lastNamelessSemDomLevel+1)
+	{
+		print '$levelOfDomain > $lastNamelessSemDomLevel+1 so fill in the blanks <br>';
+		//print 'entered buildTreeToSupportThisItem   <br>';
+		print '$levelOfDomain='.$levelOfDomain.'   <br>';
+		printlastNamelessSemDom ();
+		printlastNamedSemDom ();
+	}
+	*/
+}
+
+function printLastParent($parentToPrint)
+{
+	print '   $parentToPrint:';
+	foreach ($parentToPrint as $digit)
 	{
 		print $digit . '.';
 	}
 	print '<br>';
-	
-	for ($i=0; $i<$levelOfDomain-1; $i++)
-	{
-		print '    $domainDigits[i]:'. (string)$domainDigits[i] . '    $semDomainsOdometer[i]:'. (string)$semDomainsOdometer[i] . '<br>'; 
-		if ($domainDigits[i] > $semDomainsOdometer[i])
-		{
-			$levelToPrint[i] = $domainDigits[i];
-			for ($j=0; $j<i; $j++)
-			{
-				$strPrint = $levelToPrint[i] . '.';
-			}
-			outputSemDomAsJava($i, $strPrint);
-		}
-	}
-
 }
 
 function printRootDomainIfNeeded($domainNumber)
 {
-	global $semDomainsOdometer;
+	global $lastNamelessSemDom;
+	global $lastNamelessSemDomLevel;
 	global $rootDomainPrinted;
 	global $roots;
 	$rootDomain = substr($domainNumber, 0, 1);
@@ -125,14 +159,36 @@ function printRootDomainIfNeeded($domainNumber)
 		print "$roots[$rootDomain] <br>";
 		$rootDomainPrinted[$rootDomain] = "yes";
 		
-		$semDomainsOdometer = array($rootDomain,0,0,0,0);
-		//print '   $semDomainsOdometer(all):';
-		//foreach ($semDomainsOdometer as $digit)
-		//{
-		//	print $digit . '.';
-		//}
-		//print '<br>';
+		$lastNamelessSemDom = array($rootDomain,0,0,0,0);
+		$lastNamelessSemDomLevel = 1;
+		//printlastNamelessSemDom ();
 	}
+}
+
+function printlastNamedSemDom ()
+{
+	global $lastNamedSemDom;
+	//global $lastNamelessSemDomLevel;
+	print '   $$lastNamedSemDom:';
+	foreach ($lastNamedSemDom as $digit)
+	{
+		print $digit . '.';
+	}
+	print   '<br>';
+
+}
+
+function printlastNamelessSemDom ()
+{
+	global $lastNamelessSemDom;
+	global $lastNamelessSemDomLevel;
+	print '   $lastNamelessSemDom(all):';
+	foreach ($lastNamelessSemDom as $digit)
+	{
+		print $digit . '.';
+	}
+	print '    $lastNamelessSemDomLevel:' . $lastNamelessSemDomLevel. '<br>';
+
 }
 
 function outputSemDomAsJava($levelOfDomain, $newString)
