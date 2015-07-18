@@ -53,7 +53,6 @@ processFromFile();
 <?php 
 function processFromFile()
 {
-	global $lastNamedSemDom;
 	global $lastSemDom;
 	global $lastSemDomLevel;
 	 $file = fopen("SemDomainsSena3Copy.txt","r");
@@ -73,14 +72,22 @@ function processFromFile()
 		 $newString = "$domainNumberModified" . substr($currentSemDomain, strlen($domainNumber), strlen($currentSemDomain));
 		 outputSemDomAsJava($levelOfDomain, $newString);
 		 $currentDigits = split('-', $domainNumber);
-		 $lastSemDom = array (0,0,0,0,0,0);
-		 for ($i=0; $i<count($currentDigits); $i++)
-		 {
-		 	$lastSemDom[$i] = $currentDigits[$i];
-		 }
-		 $lastSemDomLevel = count($lastSemDom);
+		 setLastSemDom($currentDigits);
 	 }
 	 fclose($file); 
+}
+
+function setLastSemDom($currentDigits)
+{
+	global $lastSemDom;
+	global $lastSemDomLevel;
+	$lastSemDom = array (0,0,0,0,0,0);
+	for ($i=0; $i<count($currentDigits); $i++)
+	{
+		$lastSemDom[$i] = $currentDigits[$i];
+	}
+	$lastSemDomLevel = count($lastSemDom);
+
 }
 
 function buildTreeToSupportThisItem($domainNumber, $levelOfDomain)
@@ -93,22 +100,38 @@ function buildTreeToSupportThisItem($domainNumber, $levelOfDomain)
 	$currentDomainDigits = split('-', $domainNumber);
 	$currentDomainCount = count($currentDomainDigits);
 
+	//printDomainDigits('$currentDomainDigits is ', $currentDomainDigits);
+	//printDomainDigits('$lastSemDom is ', $lastSemDom);
 	//solve this
 	//1.1.1.6  last one printed  to
 	//1.2.2.3  current one
 	//need 1.2, 1.2.2 before 1.2.2.3
 	
 	$strToPrint = $lastSemDom[0].'.';
+	$currentDigits = array($lastSemDom[0]);
 	//Note skip the first digit since we printed it already
 	for ($i=1; $i<$currentDomainCount-1; $i++)
 	{
 		$strToPrint = $strToPrint . $currentDomainDigits[$i] . ".";
+		$currentDigits[$i] = $currentDomainDigits[$i];
 		if ($currentDomainDigits[$i] > $lastSemDom[$i])
 		{
 			//print "about to print $strToPrint as output <br>";
 			outputSemDomAsJava($i+1, $strToPrint);
+			setLastSemDom($currentDigits);
 		}
 	}
+}
+
+function printDomainDigits($whatisstring, $digitsArray)
+{
+	print $whatisstring . ': ';
+	$numDigits = count($digitsArray);
+	for ($i=0; $i<$numDigits; $i++)
+	{
+		print "$digitsArray[$i]" . '.';
+	}
+	print '<br>';
 }
 
 function printRootDomainIfNeeded($domainNumber)
